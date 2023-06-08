@@ -10,18 +10,12 @@ function Start-Stressing
     .OUTPUTS
         Console status messages on the testing status only.
 
-    .PARAMETER NoCPU
-        OPTIONAL. Switch. Alias: -nc. Disables CPU tests.
-
-    .PARAMETER NoMemory
-        OPTIONAL. Switch. Alias: -nm. Disables memory tests.
-
     .PARAMETER WarmUpTime
-        OPTIONAL. Integer. Alias: -wt. The time, in minutes, to wait before starting stress tests.
+        OPTIONAL. Integer. Alias: -wu. The time, in minutes, to wait before starting stress tests.
         Warm up time is not included in the total test time. Default Value: 0.
 
     .PARAMETER CoolDownTime
-        OPTIONAL. Integer. Alias: -ct. The time, in minutes, to wait after the tests have been completed before
+        OPTIONAL. Integer. Alias: -cd. The time, in minutes, to wait after the tests have been completed before
         exiting the script process. Cool down time is not included in the total test time. Default Value: 0.
 
     .PARAMETER TestTime
@@ -36,6 +30,22 @@ function Start-Stressing
         OPTIONAL. Integer. Alias: -ri. The time, in minutes, to reduce all load between each stress interval.
         Default Value: 5.
 
+    .PARAMETER CpuThreads
+        OPTIONAL. Integer. Alias: -ct. The number of threads to use for CPU stressing.
+        Default Value: Automatically calculated based on physical cores. 2 for Docker containers.
+        Passing a zero will enable automatic calculation. Use the NoCPU switch to ignore this test.
+
+    .PARAMETER MemThreads
+        OPTIONAL. Integer. Alias: -mt. The number of threads to use for memory stressing.
+        Default Value: Automatically calculated based on physical memory. 2 for Docker containers.
+        Passing a zero will enable automatic calculation. Use the NoMemory switch to ignore this test.
+
+    .PARAMETER NoCPU
+        OPTIONAL. Switch. Alias: -nc. Disables CPU tests.
+
+    .PARAMETER NoMemory
+        OPTIONAL. Switch. Alias: -nm. Disables memory tests.
+
     .EXAMPLE
 
         Start-Stressing -tt 60 -wt 2 -ct 1 -si 5 -ri 5
@@ -44,13 +54,15 @@ function Start-Stressing
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param (
+        [Parameter()] [Alias('wu')] [ValidateRange(0, [int]::MaxValue)] [Int] $WarmUpTime     = 0,
+        [Parameter()] [Alias('cd')] [ValidateRange(0, [int]::MaxValue)] [Int] $CoolDownTime   = 0,
+        [Parameter()] [Alias('tt')] [ValidateRange(0, [int]::MaxValue)] [Int] $TestTime       = 30,
+        [Parameter()] [Alias('si')] [ValidateRange(0, [int]::MaxValue)] [Int] $StressInterval = 5,
+        [Parameter()] [Alias('ri')] [ValidateRange(0, [int]::MaxValue)] [Int] $RestInterval   = 5,
+        [Parameter()] [Alias('ct')] [ValidateRange(0, [int]::MaxValue)] [Int] $CpuThreads,
+        [Parameter()] [Alias('mt')] [ValidateRange(0, [int]::MaxValue)] [Int] $MemThreads,
         [Parameter()] [Alias('nc')] [Switch] $NoCPU,
-        [Parameter()] [Alias('nm')] [Switch] $NoMemory,
-        [Parameter()] [Alias('wt')] [Int]    $WarmUpTime     = 0,
-        [Parameter()] [Alias('ct')] [Int]    $CoolDownTime   = 0,
-        [Parameter()] [Alias('tt')] [Int]    $TestTime       = 30,
-        [Parameter()] [Alias('si')] [Int]    $StressInterval = 5,
-        [Parameter()] [Alias('ri')] [Int]    $RestInterval   = 5
+        [Parameter()] [Alias('nm')] [Switch] $NoMemory
     )
 
     begin
@@ -63,8 +75,19 @@ function Start-Stressing
             $logicalCPUs = $null
             $physicalMem = $null
         }
-        $memThreads      = if ( $NoMemory ) { 0 } elseif ( $null -eq $physicalMem -or $physicalMem -ge 16384 ) { 2 } else { 1 }
-        $cpuThreads      = if ( $NoCPU    ) { 0 } elseif ( $null -eq $logicalCPUs ) { 2 } else { $logicalCPUs - $memThreads }
+
+        if ( $CpuThreads -eq 0 ) {
+            $cpuThreads = if ( $NoCPU ) { 0 }
+                          elseif ( $null -eq $logicalCPUs ) { 2 }
+                          else { $logicalCPUs - $memThreads }
+        }
+
+        if ( $MemThreads -eq 0 ) {
+            $MemThreads = if ( $NoMemory ) { 0 }
+                          elseif ( $null -eq $physicalMem -or $physicalMem -ge 16384 ) { 2 }
+                          else { 1 }
+        }
+
         $TestStartTime   = ( Get-Date )
         $TestEndTime     = $TestStartTime + ( New-TimeSpan -Minutes $TestTime )
     }

@@ -21,7 +21,8 @@ To test in Microsoft's PowerShell container:
                 -e "STRESS_CoolDownTime=0" `
                 -e "STRESS_StressInterval=1" `
                 -e "STRESS_RestInterval=1" `
-                -e "STRESS_NoMemory=1" `
+                -e "STRESS_CpuThreads=2" `
+                -e "STRESS_MemThreads=2" `
                 -it `
                 mcr.microsoft.com/powershell:nanoserver-1809 `
                 pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
@@ -30,11 +31,11 @@ To test in Microsoft's PowerShell container:
 OPTIONS: 
 
     .PARAMETER WarmUpTime
-        OPTIONAL. Integer. Alias: -wt. The time, in minutes, to wait before starting stress tests.
+        OPTIONAL. Integer. Alias: -wu. The time, in minutes, to wait before starting stress tests.
         Warm up time is not included in the total test time. Default Value: 0.
 
     .PARAMETER CoolDownTime
-        OPTIONAL. Integer. Alias: -ct. The time, in minutes, to wait after the tests have been completed before
+        OPTIONAL. Integer. Alias: -cd. The time, in minutes, to wait after the tests have been completed before
         exiting the script process. Cool down time is not included in the total test time. Default Value: 0.
 
     .PARAMETER TestTime
@@ -48,11 +49,21 @@ OPTIONS:
     .PARAMETER RestInterval
         OPTIONAL. Integer. Alias: -ri. The time, in minutes, to reduce all load between each stress interval.
         Default Value: 5.
-        
-     .PARAMETER NoCPU **
+
+    .PARAMETER CpuThreads
+        OPTIONAL. Integer. Alias: -ct. The number of threads to use for CPU stressing.
+        Default Value: Automatically calculated based on physical cores. 2 for Docker containers.
+        Passing a zero will enable automatic calculation. Use the NoCPU switch to ignore this test.
+
+    .PARAMETER MemThreads
+        OPTIONAL. Integer. Alias: -mt. The number of threads to use for memory stressing.
+        Default Value: Automatically calculated based on physical memory. 2 for Docker containers.
+        Passing a zero will enable automatic calculation. Use the NoMemory switch to ignore this test.
+
+    .PARAMETER NoCPU
         OPTIONAL. Switch. Alias: -nc. Disables CPU tests.
 
-    .PARAMETER NoMemory **
+    .PARAMETER NoMemory
         OPTIONAL. Switch. Alias: -nm. Disables memory tests.
 
-    ** NoCPU and NoMemory are exclusive - only one can be used per test.
+    ** NoCPU and NoMemory are exclusive.
