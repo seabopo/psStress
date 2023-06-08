@@ -55,12 +55,18 @@ function Start-Stressing
 
     begin
     {
-        $logicalCPUs = (Get-ComputerInfo).CsNumberOfLogicalProcessors
-        $physicalMem = [math]::Round((Get-ComputerInfo).OsTotalVisibleMemorySize/1024)
-        $memThreads  = if ( $NoMemory ) { 0 } elseif ( $physicalMem -ge 16384 ) { 2 } else { 1 }
-        $cpuThreads  = if ( $NoCPU    ) { 0 } else { $logicalCPUs - $memThreads }
-        $TestStartTime  = ( Get-Date )
-        $TestEndTime    = $TestStartTime + ( New-TimeSpan -Minutes $TestTime )
+        if ( $null -eq $(Get-Service -Name cexecsvc -ErrorAction SilentlyContinue) ) {
+            $logicalCPUs = (Get-ComputerInfo).CsNumberOfLogicalProcessors
+            $physicalMem = [math]::Round((Get-ComputerInfo).OsTotalVisibleMemorySize/1024)
+        }
+        else {
+            $logicalCPUs = $null
+            $physicalMem = $null
+        }
+        $memThreads      = if ( $NoMemory ) { 0 } elseif ( $null -eq $physicalMem -or $physicalMem -ge 16384 ) { 2 } else { 1 }
+        $cpuThreads      = if ( $NoCPU    ) { 0 } elseif ( $null -eq $logicalCPUs ) { 2 } else { $logicalCPUs - $memThreads }
+        $TestStartTime   = ( Get-Date )
+        $TestEndTime     = $TestStartTime + ( New-TimeSpan -Minutes $TestTime )
     }
 
     process
@@ -68,7 +74,7 @@ function Start-Stressing
         try {
 
             if ( $NoCPU -and $NoMemory ) {
-                Write-Status -e -m $( "Stress test failed. 'NoCPU' and 'NoMemory' switches were both used." )
+                Write-Info -e -m $( "Stress test failed. 'NoCPU' and 'NoMemory' switches were both used." )
                 return
             }
 
@@ -79,8 +85,8 @@ function Start-Stressing
                 EndTime   = $TestEndTime
             }
             Write-EventMessage @eventData
-            Write-Info -I -M $( "... Logical CPUs: {0}"    -f $logicalCPUs )
-            Write-Info -I -M $( "... Total Memory: {0} MB" -f $physicalMem )
+            if ($null -ne $logicalCPUs ) { Write-Info -I -M $( "... Logical CPUs: {0}"    -f $logicalCPUs ) }
+            if ($null -ne $physicalMem ) { Write-Info -I -M $( "... Total Memory: {0} MB" -f $physicalMem ) }
 
             $eventData = @{
                 Message   = "Starting warm up ..."
