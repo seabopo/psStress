@@ -1,6 +1,34 @@
 # psStress
 A PowerShell module for basic CPU and Memory stressing.
 
+\
+A Window Server Nano Docker version of this module is available here: 
+[seabopo/psstress](https://hub.docker.com/repository/docker/seabopo/psstress/general)
+
+    docker run `
+        -e "STRESS_TestTime=5" `
+        -e "STRESS_WarmUpTime=1" `
+        -e "STRESS_CoolDownTime=0" `
+        -e "STRESS_StressInterval=1" `
+        -e "STRESS_RestInterval=1" `
+        -it seabopo/psstress:nanoserver-1809 ( or :nanoserver-ltsc2022  )
+
+To test in Microsoft's PowerShell container:
+
+    docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
+                -e "STRESS_TestTime=5" `
+                -e "STRESS_WarmUpTime=1" `
+                -e "STRESS_CoolDownTime=0" `
+                -e "STRESS_StressInterval=1" `
+                -e "STRESS_RestInterval=1" `
+                -e "STRESS_NoMemory=1" `
+                -it `
+                mcr.microsoft.com/powershell:nanoserver-1809 `
+                pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
+
+
+OPTIONS: 
+
     .PARAMETER WarmUpTime
         OPTIONAL. Integer. Alias: -wt. The time, in minutes, to wait before starting stress tests.
         Warm up time is not included in the total test time. Default Value: 0.
@@ -27,4 +55,4 @@ A PowerShell module for basic CPU and Memory stressing.
     .PARAMETER NoMemory **
         OPTIONAL. Switch. Alias: -nm. Disables memory tests.
 
-** NoCPU and NoMemory are exclusive - only one can be used per test.
+    ** NoCPU and NoMemory are exclusive - only one can be used per test.
