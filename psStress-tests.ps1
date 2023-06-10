@@ -11,13 +11,13 @@ Set-Location -Path $PSScriptRoot
 Import-Module $(Split-Path $Script:MyInvocation.MyCommand.Path) -Force
 
 $Test = @{
-    AutomaticThreads = $false
+    AutomaticThreads = $true
     ManualThreads    = $false
     CPU              = $false
     Memory           = $false
     None             = $false
     DockerCode       = $false
-    DockerContainer  = $true
+    DockerContainer  = $false
 }
 
 # Clean-up Jobs if you manually abort

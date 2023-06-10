@@ -67,9 +67,15 @@ function Start-Stressing
 
     begin
     {
-        if ( $null -eq $(Get-Service -Name cexecsvc -ErrorAction SilentlyContinue) ) {
-            $logicalCPUs = (Get-ComputerInfo).CsNumberOfLogicalProcessors
-            $physicalMem = [math]::Round((Get-ComputerInfo).OsTotalVisibleMemorySize/1024)
+        if ( $IsWindows ) {
+            if ( $null -eq $(Get-Service -Name cexecsvc -ErrorAction SilentlyContinue) ) {
+                $logicalCPUs = (Get-ComputerInfo).CsNumberOfLogicalProcessors
+                $physicalMem = [math]::Round((Get-ComputerInfo).OsTotalVisibleMemorySize/1024)
+            }
+            else {
+                $logicalCPUs = $null
+                $physicalMem = $null
+            }
         }
         else {
             $logicalCPUs = $null
