@@ -1,6 +1,4 @@
-#------------------------------------------------------------------------------------------------------------------
 function Invoke-Tests
-#------------------------------------------------------------------------------------------------------------------
 {
     <#
     .DESCRIPTION
@@ -13,34 +11,43 @@ function Invoke-Tests
         [Parameter(Mandatory)] [Int]      $MEMthreads,
         [Parameter(Mandatory)] [Int]      $StressInterval,
         [Parameter(Mandatory)] [Int]      $RestInterval,
+        [Parameter(Mandatory)] [Int]      $MaxInterval,
+        [Parameter(Mandatory)] [Bool]     $RandomizeStress,
+        [Parameter(Mandatory)] [Bool]     $RandomizeRest,
         [Parameter(Mandatory)] [DateTime] $EndTime
     )
 
-    do {
-
-        $intervalType      = $( if ( $intervalType -eq 'stress' ) { 'rest' } else { 'stress' } )
-        $intervalTime      = $( if ( $intervalType -eq 'stress' ) { $StressInterval } else { $RestInterval } )
-        $intervalStartTime = ( Get-Date )
-        $intervalEndTime   = ( Get-Date ) + ( New-TimeSpan -Minutes $intervalTime )
-
-        if ( $intervalEndTime -gt $EndTime ) {
-            $intervalEndTime = $EndTime
-            $intervalTime = (NEW-TIMESPAN -Start ( Get-Date ) -End $EndTime).Minutes
+    begin
+    {
+      # User messages
+        $msg = @{
+            stress    = "Starting stress interval ..."
+            rest      = "Starting rest interval ..."
+            jobs      = "... Jobs started: {0}"
+            countdown = "... Interval will complete in {0} minute(s) ..."
+            cleanup   = "... Cleaning up jobs ..."
+            complete  = "... Interval complete."
         }
+    }
 
-        if ( $intervalTime -gt 0 ) {
+    process
+    {
+        do {
 
-            if ( $intervalType -eq 'stress' ) {
+            if ( $stress ) { $stress = $false; $rest = $true;  $duration = $RestInterval   }
+            else           { $stress = $true;  $rest = $false; $duration = $StressInterval }
 
-                $eventData = @{
-                    Message    = "Starting stress interval ..."
-                    Duration   = $intervalTime
-                    StartTime  = $intervalStartTime
-                    EndTime    = $intervalEndTime
-                    CPUthreads = $CPUthreads
-                    MEMthreads = $MEMthreads
-                }
-                Write-EventMessage @eventData
+            if ( ($stress -and $RandomizeStress) -or ($rest -and $RandomizeRest) ) {
+                $duration = Get-Random -Minimum $duration -Maximum $MaxInterval
+            }
+
+            if ( ( (Get-Date) + (New-TimeSpan -Minutes $duration) ) -gt $EndTime ) {
+                $duration = (NEW-TIMESPAN -Start ( Get-Date ) -End $EndTime).Minutes
+            }
+
+            if ( $stress -and $duration -gt 0 ) {
+
+                Write-EventMessages -m $msg.stress -d $duration -c $CPUthreads -r $MEMthreads
 
                 if ( $CPUthreads -gt 0 ) {
                     foreach ( $thread in 1..$CPUthreads ){
@@ -60,33 +67,30 @@ function Invoke-Tests
                     }
                 }
 
-                Write-Info -I -M $( "... {0} Jobs started ..." -f @(get-job).count )
+                Write-Info -I -M $( $msg.jobs -f @(get-job).count )
 
-                $intervalTime..1 | ForEach-Object {
-                    Write-Info -I -M $( "... Event will complete in {0} minute(s)." -f $_ )
+                $duration..1 | ForEach-Object {
+                    Write-Info -I -M $( $msg.countdown -f $_ )
                     Start-Sleep -Seconds 60
                 }
 
-                Write-Info -I -M $( "... Cleaning up jobs." )
+                Write-Info -I -M $msg.cleanup
                 get-job | stop-job
                 get-job | Remove-Job
+               #[System.GC]::GetTotalMemory(‘forcefullcollection’) | out-null
+                [System.GC]::Collect()
+                [GC]::Collect()
+                [GC]::WaitForPendingFinalizers()
 
-                Write-Info -I -M $( "... Event completed." )
-
-            }
-            else {
-
-                $eventData = @{
-                    Message   = "Starting rest interval ..."
-                    Duration  = $intervalTime
-                    StartTime = ( Get-Date )
-                    EndTime   = ( Get-Date ) + ( New-TimeSpan -Minutes $intervalTime )
-                }
-                Write-EventMessage @eventData -wait
+                Write-Info -I -M $msg.complete
 
             }
-        }
+            elseif ( $rest -and $duration -gt 0 ) {
 
-    } until ( (Get-Date) -ge $EndTime )
+                Write-EventMessages -m $msg.rest -d $duration -wait
 
+            }
+
+        } until ( (Get-Date) -ge $EndTime )
+    }
 }

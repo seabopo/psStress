@@ -64,7 +64,6 @@ function Write-Info
     #>
 
     [CmdletBinding(DefaultParameterSetName = "isInformation")]
-    [alias("Status")]
     param (
         [parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [AllowEmptyString()][AllowNull()]

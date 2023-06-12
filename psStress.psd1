@@ -33,7 +33,8 @@ Copyright = '(c) seabopo (Sean Powell). All rights reserved.'
 # Description = ''
 
 # Minimum version of the PowerShell engine required by this module
-# PowerShellVersion = ''
+# Valid values are 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 6.1, 6.2, 7.0 and 7.1.
+PowerShellVersion = '7.0'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''

@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------------------------------------------
-function Write-EventMessage
+function Write-EventMessages
 #------------------------------------------------------------------------------------------------------------------
 {
     <#
@@ -9,16 +9,17 @@ function Write-EventMessage
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory)] [String]   $Message,
-        [Parameter(Mandatory)] [Int]      $Duration,
-        [Parameter(Mandatory)] [DateTime] $StartTime,
-        [Parameter(Mandatory)] [DateTime] $EndTime,
-        [Parameter()]          [Int]      $CPUthreads = $null,
-        [Parameter()]          [Int]      $MEMthreads = $null,
-        [Parameter()]          [Switch]   $Wait
+        [Parameter(Mandatory)] [Alias('m')] [String] $Message,
+        [Parameter(Mandatory)] [Alias('d')] [Int]    $Duration,
+        [Parameter()]          [Alias('c')] [Int]    $CPUthreads = $null,
+        [Parameter()]          [Alias('r')] [Int]    $MEMthreads = $null,
+        [Parameter()]          [Alias('w')] [Switch] $Wait
     )
 
     $PassedParameters = $PSBoundParameters # Powershell bug prevents direct access
+
+    $StartTime = ( Get-Date )
+    $EndTime   = ( Get-Date ) + ( New-TimeSpan -Minutes $Duration )
 
     Write-Info -P -M $Message -PS
     Write-Info -I -M $( "... Duration: {0} minutes" -f $Duration  )
@@ -33,12 +34,14 @@ function Write-EventMessage
         Write-Info -I -M $("... Memory Threads: {0}" -f $MEMthreads )
     }
 
-    If ( $Wait -and $Duration -gt 0 ) {
-        $Duration..1 | ForEach-Object {
-            Write-Info -I -M $( "... Event will complete in {0} minute(s)." -f $_ )
-            Start-Sleep -Seconds 60
+    If ( $Wait ) {
+        If ( $Duration -gt 0 ) {
+            $Duration..1 | ForEach-Object {
+                Write-Info -I -M $( "... Interval will complete in {0} minute(s) ..." -f $_ )
+                Start-Sleep -Seconds 60
+            }
         }
-        Write-Info -I -M $( "... Event completed." )
+        Write-Info -I -M $( "... Interval complete." )
     }
 
 }

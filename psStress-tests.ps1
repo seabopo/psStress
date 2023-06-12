@@ -11,12 +11,13 @@ Set-Location -Path $PSScriptRoot
 Import-Module $(Split-Path $Script:MyInvocation.MyCommand.Path) -Force
 
 $Test = @{
-    AutomaticThreads = $true
+    AutomaticThreads = $false
     ManualThreads    = $false
+    RandomThreads    = $false
     CPU              = $false
     Memory           = $false
     None             = $false
-    DockerCode       = $false
+    DockerCode       = $true
     DockerContainer  = $false
 }
 
@@ -24,23 +25,25 @@ $Test = @{
 #   get-job | stop-job
 #   get-job | Remove-Job
 
-if ( $Test.AutomaticThreads ) { Start-Stressing -tt 5 -wu 1 -cd 0 -si 2 -ri 2 }
+if ( $Test.AutomaticThreads ) { Start-Stressing -sd 3 -wi 1 -ci 0 -si 1 -ri 1 }
 
-if ( $Test.ManualThreads )    { Start-Stressing -tt 5 -wu 0 -cd 0 -si 1 -ri 1 -ct 3 -mt 3 }
+if ( $Test.ManualThreads )    { Start-Stressing -sd 4 -wi 1 -ci 1 -si 1 -ri 1 -ct 3 -mt 3 }
 
-if ( $Test.CPU )              { Start-Stressing -tt 5 -wu 0 -cd 0 -si 2 -ri 2 -NoMemory }
+if ( $Test.RandomThreads )    { Start-Stressing -sd 5 -wi 0 -ci 0 -si 2 -ri 2 -rz d,w -md 10 }
 
-if ( $Test.Memory )           { Start-Stressing -tt 5 -wu 0 -cd 0 -si 2 -ri 2 -NoCPU }
+if ( $Test.CPU )              { Start-Stressing -sd 2 -wi 0 -ci 0 -si 1 -ri 1 -NoMemory }
 
-if ( $Test.None )             { Start-Stressing -tt 5 -wu 0 -cd 0 -si 2 -ri 2 -NoCPU -NoMemory }
+if ( $Test.Memory )           { Start-Stressing -sd 2 -wi 0 -ci 0 -si 1 -ri 1 -NoCPU }
+
+if ( $Test.None )             { Start-Stressing -sd 5 -wi 0 -ci 0 -si 2 -ri 2 -NoCPU -NoMemory }
 
 if ( $Test.DockerContainer )
 {
   # Test with automatically calculated CPU and memory threads
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
-                -e "STRESS_TestTime=5" `
-                -e "STRESS_WarmUpTime=1" `
-                -e "STRESS_CoolDownTime=0" `
+                -e "STRESS_Duration=2" `
+                -e "STRESS_WarmUpInterval=0" `
+                -e "STRESS_CoolDownInterval=0" `
                 -e "STRESS_StressInterval=1" `
                 -e "STRESS_RestInterval=1" `
                 -it `
@@ -49,9 +52,9 @@ if ( $Test.DockerContainer )
 
   # Test with manually specified CPU and memory threads
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
-                -e "STRESS_TestTime=5" `
-                -e "STRESS_WarmUpTime=1" `
-                -e "STRESS_CoolDownTime=0" `
+                -e "STRESS_Duration=5" `
+                -e "STRESS_WarmUpInterval=1" `
+                -e "STRESS_CoolDownInterval=0" `
                 -e "STRESS_StressInterval=1" `
                 -e "STRESS_RestInterval=1" `
                 -e "STRESS_CpuThreads=3" `
@@ -60,10 +63,25 @@ if ( $Test.DockerContainer )
                 mcr.microsoft.com/powershell:nanoserver-1809 `
                 pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
 
+  # Test with randomized intervals
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
-                -e "STRESS_TestTime=5" `
-                -e "STRESS_WarmUpTime=1" `
-                -e "STRESS_CoolDownTime=0" `
+                -e "STRESS_Duration=10" `
+                -e "STRESS_WarmUpInterval=0" `
+                -e "STRESS_CoolDownInterval=0" `
+                -e "STRESS_StressInterval=1" `
+                -e "STRESS_RestInterval=1" `
+                -e "STRESS_RandomizeIntervals=s,r" `
+                -e "STRESS_MaxIntervalDuration=5" `
+                -e "STRESS_CpuThreads=1" `
+                -e "STRESS_MemThreads=1" `
+                -e "STRESS_NoExit=1" `
+                -it `
+                mcr.microsoft.com/powershell:nanoserver-1809 `
+                pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
+    docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
+                -e "STRESS_Duration=2" `
+                -e "STRESS_WarmUpInterval=0" `
+                -e "STRESS_CoolDownInterval=0" `
                 -e "STRESS_StressInterval=1" `
                 -e "STRESS_RestInterval=1" `
                 -e "STRESS_NoMemory=1" `
@@ -72,9 +90,9 @@ if ( $Test.DockerContainer )
                 pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
 
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
-                -e "STRESS_TestTime=5" `
-                -e "STRESS_WarmUpTime=1" `
-                -e "STRESS_CoolDownTime=0" `
+                -e "STRESS_Duration=5" `
+                -e "STRESS_WarmUpInterval=1" `
+                -e "STRESS_CoolDownInterval=0" `
                 -e "STRESS_StressInterval=1" `
                 -e "STRESS_RestInterval=1" `
                 -e "STRESS_NoCPU=1" `
@@ -86,41 +104,23 @@ if ( $Test.DockerContainer )
 
 if ( $Test.DockerCode )
 {
-    # Remove-Item -Path Env:\STRESS_* -Verbose
+    Remove-Item -Path Env:\STRESS_*
 
-    # $env:STRESS_WarmUpTime     = 1
-    # $env:STRESS_CoolDownTime   = 0
-    # $env:STRESS_TestTime       = 10
-    # $env:STRESS_StressInterval = 2
-    # $env:STRESS_RestInterval   = 1
-    # $env:STRESS_CpuThreads     = 1
-    # $env:STRESS_MemThreads     = 1
-    # $env:STRESS_NoCPU          = $true
-    # $env:STRESS_NoMemory       = $false
+    $env:STRESS_Duration            = 10
+    #$env:STRESS_WarmUpInterval      = 1
+    #$env:STRESS_CoolDownInterval    = 1
+    $env:STRESS_StressInterval      = 1
+    $env:STRESS_RestInterval        = 1
+   #$env:STRESS_RandomizeIntervals  = "s,r"
+   #$env:STRESS_MaxIntervalDuration = 10
+    $env:STRESS_CpuThreads          = 1
+    $env:STRESS_MemThreads          = 1
+   #$env:STRESS_NoCPU               = 1
+   #$env:STRESS_NoMemory            = 1
+    $env:STRESS_NoExit              = 1
 
-    #Remove-Item -Path Env:\STRESS_* -Verbose
+    #Remove-Item -Path Env:\STRESS_*
 
-    $noCPU    = $( if ([string]::IsNullOrEmpty($env:STRESS_NoCPU))    { $false } else { $true } )
-    $NoMemory = $( if ([string]::IsNullOrEmpty($env:STRESS_NoMemory)) { $false } else { $true } )
+    .\psStress-docker.ps1
 
-    $params = @{
-        WarmUpTime     = $env:STRESS_WarmUpTime     ??= 2
-        CoolDownTime   = $env:STRESS_CoolDownTime   ??= 0
-        TestTime       = $env:STRESS_TestTime       ??= 60
-        StressInterval = $env:STRESS_StressInterval ??= 15
-        RestInterval   = $env:STRESS_RestInterval   ??= 10
-        CpuThreads     = $env:STRESS_CpuThreads
-        MemThreads     = $env:STRESS_MemThreads
-    }
-    Start-Stressing @params -NoCPU:$noCPU -NoMemory:$NoMemory
-
-    # For PowerShell 5
-    # $params = @{
-    #     WarmUpTime     = $( if ([string]::IsNullOrEmpty($env:STRESS_WarmUpTime))     {  2 } else {$env:STRESS_WarmUpTime} )
-    #     CoolDownTime   = $( if ([string]::IsNullOrEmpty($env:STRESS_CoolDownTime))   {  0 } else {$env:STRESS_CoolDownTime} )
-    #     TestTime       = $( if ([string]::IsNullOrEmpty($env:STRESS_TestTime))       { 60 } else {$env:STRESS_TestTime} )
-    #     StressInterval = $( if ([string]::IsNullOrEmpty($env:STRESS_StressInterval)) { 15 } else {$env:STRESS_StressInterval} )
-    #     RestInterval   = $( if ([string]::IsNullOrEmpty($env:STRESS_RestInterval))   { 10 } else {$env:STRESS_RestInterval} )
-    # }
-    # Start-Stressing @params -NoCPU:$env:STRESS_NoCPU -NoMemory:$env:STRESS_NoMemory
 }
