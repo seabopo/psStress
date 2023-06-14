@@ -34,7 +34,7 @@ function Get-ThreadCounts
 
     if ( $CPU -eq 0 ) {
          $CPU = if ( $NoCPU ) { 0 }
-                elseif ( $logicalCPUs ) { $logicalCPUs - $memThreads }
+                elseif ( $logicalCPUs ) { $logicalCPUs - $Memory }
                 elseif ( $Memory -gt 2 ) { 0 }
                 else { 2 - $Memory }
     }

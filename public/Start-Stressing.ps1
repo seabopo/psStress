@@ -79,6 +79,12 @@ function Start-Stressing
         has ended. Use this setting to emulate a service in k8s or other systems that use a scheduler so the
         StressDuration paramater is honored and scheduler doesn't keep restarting the the container/pod.
 
+    .PARAMETER EnableWebServer
+        OPTIONAL. Switch. Alias: -ws. Enables a webserver which displays the console log messages.
+
+    .PARAMETER WebServerPort
+        OPTIONAL. INT. Alias: -wp. Sets the WebServer port. Default: 8080
+
     .EXAMPLE
 
         Start-Stressing -sd 60 -wi 2 -ci 0 -si 5 -ri 5 -RandomizeIntervals d,s,r -NoExit
@@ -86,8 +92,8 @@ function Start-Stressing
     #>
     [CmdletBinding()]
     param (
-        [Parameter()] [Alias('sd')] [ValidateRange(0, [int]::MaxValue)] [Int]      $StressDuration      = 30,
-        [Parameter()] [Alias('wi')] [ValidateRange(0, [int]::MaxValue)] [Int]      $WarmUpInterval      = 0,
+        [Parameter()] [Alias('sd')] [ValidateRange(0, [int]::MaxValue)] [Int]      $StressDuration      = 10,
+        [Parameter()] [Alias('wi')] [ValidateRange(0, [int]::MaxValue)] [Int]      $WarmUpInterval      = 1,
         [Parameter()] [Alias('ci')] [ValidateRange(0, [int]::MaxValue)] [Int]      $CoolDownInterval    = 0,
         [Parameter()] [Alias('si')] [ValidateRange(0, [int]::MaxValue)] [Int]      $StressInterval      = 5,
         [Parameter()] [Alias('ri')] [ValidateRange(0, [int]::MaxValue)] [Int]      $RestInterval        = 5,
@@ -97,7 +103,9 @@ function Start-Stressing
         [Parameter()] [Alias('md')] [ValidateRange(0, [int]::MaxValue)] [Int]      $MaxIntervalDuration = 1440,
         [Parameter()] [Alias('nc')]                                     [Switch]   $NoCPU,
         [Parameter()] [Alias('nm')]                                     [Switch]   $NoMemory,
-        [Parameter()] [Alias('nx')]                                     [Switch]   $NoExit
+        [Parameter()] [Alias('nx')]                                     [Switch]   $NoExit,
+        [Parameter()] [Alias('ws')]                                     [Switch]   $EnableWebServer,
+        [Parameter()] [Alias('wp')] [ValidateRange(0, [int]::MaxValue)] [Int]      $WebServerPort       = 8080
     )
 
     begin
@@ -107,19 +115,29 @@ function Start-Stressing
                                                     -Memory $MemThreads -NoMemory:$NoMemory
 
       # Update the single-use intervals based on the the RandomizeIntervals parameter.
-        if ( $StressDuration -eq 0 ) { $StressDuration = [int32]::MaxValue }
+        if ( $StressDuration -eq 0 ) {
+            $StressDuration = [int32]::MaxValue }
         elseif ( $RandomizeIntervals.Contains('d') ) {
             $StressDuration = Get-Random -Minimum $StressDuration -Maximum $MaxIntervalDuration
         }
+
         if ( $RandomizeIntervals.Contains('w') ) {
             $WarmUpInterval = Get-Random -Minimum $WarmUpInterval -Maximum $MaxIntervalDuration
         }
+
         if ( $RandomizeIntervals.Contains('c') ) {
             $CoolDownInterval = Get-Random -Minimum $CoolDownInterval -Maximum $MaxIntervalDuration
         }
 
-      # The end time of the
+      # The end time of the stress cycle
         $StressEndTime = (Get-Date) + ( New-TimeSpan -Minutes $StressDuration )
+
+      # The total time for all intervals
+        $totalIntervalTime = $WarmUpInterval + $StressDuration + $CoolDownInterval
+
+      # The max Stress Cycle Interval for user messages
+        $maxSCinterval = if ( $StressDuration -lt $MaxIntervalDuration ) { $StressDuration }
+                         else { $MaxIntervalDuration }
 
       # User messages
         $msg = @{
@@ -130,8 +148,26 @@ function Start-Stressing
             cool       = "Starting cool down interval ..."
             complete   = "All intervals completed."
             error      = "Intervals failed."
-            noexit     = "The NoExit switch was detected. This process will now wait indefinitely ..."
+            noexit     = "The NoExit switch was detected.`n`rThis process will now wait indefinitely ..."
+
+            warmint    = "... Warm Interval: {0} minutes"   -f $WarmUpInterval
+            coolint    = "... Cool Interval: {0} minutes"   -f $CoolDownInterval
+            strescyc   = "... Stress Cycle: {0} minutes"    -f $StressDuration
+            randomized = "... Randomized Interval(s): {0}"  -f $( $RandomizeIntervals -join ',' )
+            stresint   = "... Stress Interval: {0} minutes" -f $( $RandomizeIntervals.Contains('s') ?
+                                                                  $('{0}-{1}' -f $StressInterval,$maxSCinterval) :
+                                                                  $StressInterval )
+            restint    = "... Rest Interval: {0} minutes"   -f $( $RandomizeIntervals.Contains('r') ?
+                                                                  $('{0}-{1}' -f $RestInterval,$maxSCinterval) :
+                                                                  $RestInterval )
+
+            startingws = "... Starting web server. THIS REQUIRES ADMIN RIGHTS."
+            startedws  = "... Web server started on port {0}." -f $WebServerPort
         }
+
+      # Clear the log files
+        $null | Out-File $WS_APP_LOG_PATH
+        $null | Out-File $WS_USR_LOG_PATH
     }
 
     process
@@ -140,7 +176,20 @@ function Start-Stressing
 
             if ( $NoCPU -and $NoMemory ) { Write-Info -e -m $msg.paramError; return }
 
-            Write-EventMessages -m $msg.start -d ( $WarmUpInterval + $StressDuration + $CoolDownInterval)
+            Write-EventMessages -m $msg.start -d $totalIntervalTime -c $CpuThreads -r $MemThreads
+            Write-Info -M $msg.warmint
+            Write-Info -M $msg.coolint
+            Write-Info -M $msg.strescyc
+            Write-Info -M $msg.stresint
+            Write-Info -M $msg.restint
+            Write-Info -M $msg.randomized
+
+            if ( $EnableWebServer ) {
+                Write-Info -M $msg.startingws
+               #Start-Process -FilePath "pwsh" -Verb RunAs -ArgumentList ('-File', $WS_START_PATH, '-port', $WebServerPort)
+                Start-Process -FilePath "pwsh" -ArgumentList ('-File', $WS_START_PATH, '-port', $WebServerPort)
+                Write-Info -M $($msg.startedws -f $WebServerPort)
+            }
 
             Write-EventMessages -m $msg.warm -d $WarmUpInterval -Wait
 
@@ -166,7 +215,6 @@ function Start-Stressing
                 Write-Info -P -PS -M $msg.noexit
                 Wait-Event -1
             }
-
         }
         catch {
             Write-Info -E -M $msg.error

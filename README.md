@@ -25,7 +25,7 @@ To test in Microsoft's PowerShell container:
                 -e "STRESS_MemThreads=2" `
                 -it `
                 mcr.microsoft.com/powershell:nanoserver-1809 `
-                pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
+                pwsh -ExecutionPolicy Bypass -command "/psstress/docker.ps1"
 
 
 OPTIONS: 

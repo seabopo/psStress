@@ -7,6 +7,7 @@
 Clear-Host
 
 Set-Location -Path $PSScriptRoot
+Push-Location -Path $PSScriptRoot
 
 Import-Module $(Split-Path $Script:MyInvocation.MyCommand.Path) -Force
 
@@ -19,13 +20,16 @@ $Test = @{
     None             = $false
     DockerCode       = $true
     DockerContainer  = $false
+    WebServer        = $false
 }
 
 # Clean-up Jobs if you manually abort
 #   get-job | stop-job
 #   get-job | Remove-Job
 
-if ( $Test.AutomaticThreads ) { Start-Stressing -sd 3 -wi 1 -ci 0 -si 1 -ri 1 }
+if ( $Test.WebServer )        { Start-WebServer -port 80 }
+
+if ( $Test.AutomaticThreads ) { Start-Stressing -sd 3 -wi 1 -ci 0 -si 1 -ri 1 -ws }
 
 if ( $Test.ManualThreads )    { Start-Stressing -sd 4 -wi 1 -ci 1 -si 1 -ri 1 -ct 3 -mt 3 }
 
@@ -41,14 +45,16 @@ if ( $Test.DockerContainer )
 {
   # Test with automatically calculated CPU and memory threads
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
-                -e "STRESS_Duration=2" `
-                -e "STRESS_WarmUpInterval=0" `
+                -e "STRESS_Duration=5" `
+                -e "STRESS_WarmUpInterval=1" `
                 -e "STRESS_CoolDownInterval=0" `
                 -e "STRESS_StressInterval=1" `
                 -e "STRESS_RestInterval=1" `
-                -it `
+                -e "STRESS_EnableWebServer=1" `
+                -it --user ContainerAdministrator `
+                -p 8080:8080 `
                 mcr.microsoft.com/powershell:nanoserver-1809 `
-                pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
+                pwsh -ExecutionPolicy Bypass -command "/psstress/docker.ps1"
 
   # Test with manually specified CPU and memory threads
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
@@ -61,7 +67,7 @@ if ( $Test.DockerContainer )
                 -e "STRESS_MemThreads=3" `
                 -it `
                 mcr.microsoft.com/powershell:nanoserver-1809 `
-                pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
+                pwsh -ExecutionPolicy Bypass -command "/psstress/docker.ps1"
 
   # Test with randomized intervals
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
@@ -77,7 +83,7 @@ if ( $Test.DockerContainer )
                 -e "STRESS_NoExit=1" `
                 -it `
                 mcr.microsoft.com/powershell:nanoserver-1809 `
-                pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
+                pwsh -ExecutionPolicy Bypass -command "/psstress/docker.ps1"
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
                 -e "STRESS_Duration=2" `
                 -e "STRESS_WarmUpInterval=0" `
@@ -87,7 +93,7 @@ if ( $Test.DockerContainer )
                 -e "STRESS_NoMemory=1" `
                 -it `
                 mcr.microsoft.com/powershell:nanoserver-1809 `
-                pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
+                pwsh -ExecutionPolicy Bypass -command "/psstress/docker.ps1"
 
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
                 -e "STRESS_Duration=5" `
@@ -98,7 +104,7 @@ if ( $Test.DockerContainer )
                 -e "STRESS_NoCPU=1" `
                 -it `
                 mcr.microsoft.com/powershell:nanoserver-1809 `
-                pwsh -ExecutionPolicy Bypass -command "/psstress/psstress-docker.ps1"
+                pwsh -ExecutionPolicy Bypass -command "/psstress/docker.ps1"
 
 }
 
@@ -106,21 +112,24 @@ if ( $Test.DockerCode )
 {
     Remove-Item -Path Env:\STRESS_*
 
-    $env:STRESS_Duration            = 10
-    #$env:STRESS_WarmUpInterval      = 1
-    #$env:STRESS_CoolDownInterval    = 1
+    $env:STRESS_StressDuration      = 10
+    $env:STRESS_WarmUpInterval      = 1
+    $env:STRESS_CoolDownInterval    = 1
     $env:STRESS_StressInterval      = 1
     $env:STRESS_RestInterval        = 1
-   #$env:STRESS_RandomizeIntervals  = "s,r"
-   #$env:STRESS_MaxIntervalDuration = 10
+    $env:STRESS_RandomizeIntervals  = "s,r"
+    $env:STRESS_MaxIntervalDuration = 5
     $env:STRESS_CpuThreads          = 1
     $env:STRESS_MemThreads          = 1
    #$env:STRESS_NoCPU               = 1
    #$env:STRESS_NoMemory            = 1
     $env:STRESS_NoExit              = 1
+    $env:STRESS_WebServerPort       = 80
+    $env:STRESS_EnableWebServer     = 1
+    #$env:STRESS_EnableWebServerOnly = 1
 
     #Remove-Item -Path Env:\STRESS_*
 
-    .\psStress-docker.ps1
+    .\docker.ps1
 
 }

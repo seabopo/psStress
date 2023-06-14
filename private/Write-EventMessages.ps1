@@ -22,9 +22,9 @@ function Write-EventMessages
     $EndTime   = ( Get-Date ) + ( New-TimeSpan -Minutes $Duration )
 
     Write-Info -P -M $Message -PS
-    Write-Info -I -M $( "... Duration: {0} minutes" -f $Duration  )
     Write-Info -I -M $( "... Start Time: {0}"       -f $StartTime )
     Write-Info -I -M $( "... End Time: {0}"         -f $EndTime   )
+    Write-Info -I -M $( "... Duration: {0} minutes" -f $Duration  )
 
     if ( $PassedParameters.ContainsKey('CPUthreads') ) {
         Write-Info -I -M $("... CPU Threads: {0}"    -f $CPUthreads )
@@ -43,5 +43,4 @@ function Write-EventMessages
         }
         Write-Info -I -M $( "... Interval complete." )
     }
-
 }

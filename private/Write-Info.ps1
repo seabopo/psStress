@@ -56,6 +56,9 @@ function Write-Info
     .PARAMETER PreSpace
         OPTIONAL. Switch. Alias: -ps. Adds a blank line before the logged item.
 
+    .PARAMETER NoLog
+        OPTIONAL. Switch. Alias: -nl. Writes to the console only, and skips the log file.
+
     .EXAMPLE
         Write-Status -Type 'Information' -Message 'Testing ...'
 
@@ -96,7 +99,8 @@ function Write-Info
         [Alias('bb')] [switch]    $DoubleBanner,
         [Alias('ts')] [switch]    $TimeStamps,
         [Alias('ds')] [switch]    $DoubleSpace,
-        [Alias('ps')] [switch]    $PreSpace
+        [Alias('ps')] [switch]    $PreSpace,
+        [Alias('nl')] [switch]    $NoLog
     )
 
     process
@@ -132,18 +136,15 @@ function Write-Info
             }
         }
 
-        if ( $TimeStamps )
-        {
+        if ( $TimeStamps ) {
             $Message = $( "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))  {0}" -f $Message )
         }
 
-        if ( $Banner)
-        {
+        if ( $Banner) {
             $Message = $( "$('-' * 80)`r`n{0}`r`n$('-' * 80)" -f $Message )
         }
 
-        if ( $DoubleBanner )
-        {
+        if ( $DoubleBanner ) {
             $Message = $( "$('-' * 80)`r`n$('-' * 80)`r`n{0}`r`n$('-' * 80)`r`n$('-' * 80)" -f $Message )
         }
 
@@ -153,6 +154,14 @@ function Write-Info
 
         if ( $DoubleSpace ) { Write-Host '' }
 
-    }
+        if ( -not $NoLog ) {
 
+            if ( $PreSpace ) { '' | Out-File $WS_APP_LOG_PATH -Append }
+
+            $Message | Out-File $WS_APP_LOG_PATH -Append
+
+            if ( $DoubleSpace ) { '' | Out-File $WS_APP_LOG_PATH -Append }
+
+        }
+    }
 }
