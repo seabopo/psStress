@@ -9,6 +9,5 @@ file, which is the module's main entrypoint.
 A variety of Windows and Docker examples are available in the 
 [/psStress-tests.ps1](https://github.com/seabopo/psStress/blob/main/psStress-tests.ps1) file.
 
-A Window Server Nano Docker version of this module is available here: 
+A Windows Nano Server image of this module is available here: 
 [seabopo/psstress](https://hub.docker.com/repository/docker/seabopo/psstress/general)
-
