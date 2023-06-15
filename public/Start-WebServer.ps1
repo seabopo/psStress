@@ -27,7 +27,7 @@ function Start-WebServer
             $wsListener.Start()
             $Error.Clear()
 
-            Write-Info -m -ps $( $msg.started -f $Port ) -nl
+            Write-Info -ps -m $( $msg.started -f $Port ) -nl
 
             :wsListener while ($wsListener.IsListening)
             {
