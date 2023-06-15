@@ -146,7 +146,7 @@ function Start-Stressing
             if ( $appData.NoCPU -and $appData.NoMemory ) { Write-Info -e -m $appData.messages.paramError; return }
 
             if ( $appData.ShowDebugData ) {
-                Write-Info -h -m "Debug Data" -PSCustomObject $appData
+                Write-Info -h -ps -m "Debug Data" -PSCustomObject $appData
                #Write-Info -h -m "Messages Debug Data" -PSCustomObject $appData.messages
             }
 
