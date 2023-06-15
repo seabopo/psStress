@@ -22,14 +22,12 @@ function Start-WebServer
     {
         try
         {
-            Write-Info -p -m $msg.starting -nl
-
             $wsListener = New-Object System.Net.HttpListener
             $wsListener.Prefixes.Add( $( "http://*:{0}/" -f $Port ) )
             $wsListener.Start()
             $Error.Clear()
 
-            Write-Info -m $( $msg.started -f $Port ) -nl
+            Write-Info -m -ps $( $msg.started -f $Port ) -nl
 
             :wsListener while ($wsListener.IsListening)
             {

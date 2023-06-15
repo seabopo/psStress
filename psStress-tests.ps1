@@ -149,14 +149,13 @@ if ( $Test.DockerContainer )
   # Test dockerhub images.
     docker run `
                 -e "STRESS_EnableWebServer=1" `
-                -e "STRESS_NoWebServerConsoleLogs=1" `
                 -e "STRESS_NoExit=1" `
                 -e "STRESS_NoStress=1" `
-                -e "STRESS_ShowDebugData=1" `
                 -p 8080:8080 `
                 seabopo/psstress:nanoserver-1809
 
     docker run `
+                -e "STRESS_ShowDebugData=1" `
                 -e "STRESS_StressDuration=10" `
                 -e "STRESS_WarmUpInterval=1" `
                 -e "STRESS_CoolDownInterval=1" `
@@ -169,7 +168,7 @@ if ( $Test.DockerContainer )
                 -e "STRESS_NoExit=1" `
                 -e "STRESS_EnableWebServer=1" `
                 -e "STRESS_WebServerPort=80" `
-                -e "STRESS_NoWebServerConsoleLogs=1" `
+                -e "STRESS_EnableWebServerConsoleLogs=1" `
                 -p 8080:8080 `
                 seabopo/psstress:nanoserver-1809
 
