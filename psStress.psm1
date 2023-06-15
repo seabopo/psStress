@@ -17,6 +17,7 @@ Set-Variable -Scope 'Local' -Name 'WS_USR_LOG_PATH' -Value $( '{0}/http/usr.log'
 Set-Variable -Scope 'Local' -Name 'WS_HEADER_PATH'  -Value $( '{0}/http/header.html' -f $PSScriptRoot )
 Set-Variable -Scope 'Local' -Name 'WS_FOOTER_PATH'  -Value $( '{0}/http/footer.html' -f $PSScriptRoot )
 Set-Variable -Scope 'Local' -Name 'WS_START_PATH'   -Value $( '{0}/webserver.ps1'    -f $PSScriptRoot )
+Set-Variable -Scope 'Local' -Name 'DOCKER_PATH'     -Value $( '{0}/docker.ps1'       -f $PSScriptRoot )
 
 @('Private','Public') | ForEach-Object {
     $export = $( $_ -eq 'Public' )

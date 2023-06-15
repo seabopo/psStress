@@ -59,6 +59,9 @@ function Write-Info
     .PARAMETER NoLog
         OPTIONAL. Switch. Alias: -nl. Writes to the console only, and skips the log file.
 
+    .PARAMETER PSCustomObject
+        OPTIONAL. Switch. Alias: -co. A PSCustomObject which will have all properties written.
+
     .EXAMPLE
         Write-Status -Type 'Information' -Message 'Testing ...'
 
@@ -68,39 +71,40 @@ function Write-Info
 
     [CmdletBinding(DefaultParameterSetName = "isInformation")]
     param (
-        [parameter(Mandatory = $false, ValueFromPipeline = $true)]
+        [parameter(ValueFromPipeline)]
         [AllowEmptyString()][AllowNull()]
-        [Alias('m')]  [string]    $Message,
+        [Alias('m')]  [string]         $Message,
 
         [Parameter(ParameterSetName = "byTypeName")]
         [ValidateSet('Header','Process','Info','Success','Warning','Error')]
-        [Alias('t')]  [string]    $Type,
+        [Alias('t')]  [string]         $Type,
 
         [Parameter(ParameterSetName = "isHeader")]
-        [Alias('h')]  [switch]    $Header,
+        [Alias('h')]  [switch]         $Header,
 
         [Parameter(ParameterSetName = "isProcess")]
-        [Alias('p')]  [switch]    $Process,
+        [Alias('p')]  [switch]         $Process,
 
         [Parameter(ParameterSetName = "isInformation")]
-        [Alias('i')]  [switch]    $Information,
+        [Alias('i')]  [switch]         $Information,
 
         [Parameter(ParameterSetName = "isSuccess")]
-        [Alias('s')]  [switch]    $Success,
+        [Alias('s')]  [switch]         $Success,
 
         [Parameter(ParameterSetName = "isWarning")]
-        [Alias('w')]  [switch]    $Warning,
+        [Alias('w')]  [switch]         $Warning,
 
         [Parameter(ParameterSetName = "isError")]
-        [Alias('e')]  [switch]    $Err,
+        [Alias('e')]  [switch]         $Err,
 
-        [Alias('l')]  [switch]    $Labels,
-        [Alias('b')]  [switch]    $Banner,
-        [Alias('bb')] [switch]    $DoubleBanner,
-        [Alias('ts')] [switch]    $TimeStamps,
-        [Alias('ds')] [switch]    $DoubleSpace,
-        [Alias('ps')] [switch]    $PreSpace,
-        [Alias('nl')] [switch]    $NoLog
+        [Alias('l')]  [switch]         $Labels,
+        [Alias('b')]  [switch]         $Banner,
+        [Alias('bb')] [switch]         $DoubleBanner,
+        [Alias('ts')] [switch]         $TimeStamps,
+        [Alias('ds')] [switch]         $DoubleSpace,
+        [Alias('ps')] [switch]         $PreSpace,
+        [Alias('nl')] [switch]         $NoLog,
+        [Alias('co')] [PSCustomObject] $PSCustomObject
     )
 
     process
@@ -152,6 +156,8 @@ function Write-Info
 
         Write-Host "$Message" -ForegroundColor $MessageColor
 
+        if ( $PSCustomObject ) { $PSCustomObject.GetEnumerator() | Sort-Object Name | Out-String }
+
         if ( $DoubleSpace ) { Write-Host '' }
 
         if ( -not $NoLog ) {
@@ -159,6 +165,8 @@ function Write-Info
             if ( $PreSpace ) { '' | Out-File $WS_APP_LOG_PATH -Append }
 
             $Message | Out-File $WS_APP_LOG_PATH -Append
+
+            if ( $PSCustomObject ) { $PSCustomObject.GetEnumerator() | Sort-Object Name | Out-File $WS_APP_LOG_PATH -Append }
 
             if ( $DoubleSpace ) { '' | Out-File $WS_APP_LOG_PATH -Append }
 

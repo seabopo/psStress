@@ -79,8 +79,21 @@ function Start-Stressing
         has ended. Use this setting to emulate a service in k8s or other systems that use a scheduler so the
         StressDuration paramater is honored and scheduler doesn't keep restarting the the container/pod.
 
+    .PARAMETER NoStress
+        OPTIONAL. Switch. Alias: -ns. Disables all testing intervals (warm, stress, rest, cool).
+        Use this to:
+         - Dump the debugging with the ShowDebugData switch and then immediately exit.
+         - Run a webserver with the EnableWebServer and NoExit switches.
+
+    .PARAMETER ShowDebugData
+        OPTIONAL. Switch. Alias: -dd. Dumps all data used by the module.
+
     .PARAMETER EnableWebServer
-        OPTIONAL. Switch. Alias: -ws. Enables a webserver which displays the console log messages.
+        OPTIONAL. Switch. Alias: -ws. Enables a webserver which displays the console log messages. Enabling a
+        WebServer requires administrative access. In a Windows container that means the process must be run as
+        the ContainerAdministrator context. On Windows, non-container installations where administrative access
+        is not detected the process will attempt to use the PowerShell RunAs argument and the user will be
+        prompted to provide access.
 
     .PARAMETER WebServerPort
         OPTIONAL. INT. Alias: -wp. Sets the WebServer port. Default: 8080
@@ -101,123 +114,80 @@ function Start-Stressing
         [Parameter()] [Alias('mt')] [ValidateRange(0, [int]::MaxValue)] [Int]      $MemThreads          = 0,
         [Parameter()] [Alias('rz')] [ValidateSet("d","w","c","s","r")]  [String[]] $RandomizeIntervals  = @(),
         [Parameter()] [Alias('md')] [ValidateRange(0, [int]::MaxValue)] [Int]      $MaxIntervalDuration = 1440,
+        [Parameter()] [Alias('wp')] [ValidateRange(0, [int]::MaxValue)] [Int]      $WebServerPort       = 8080,
+        [Parameter()] [Alias('ws')]                                     [Switch]   $EnableWebServer,
         [Parameter()] [Alias('nc')]                                     [Switch]   $NoCPU,
         [Parameter()] [Alias('nm')]                                     [Switch]   $NoMemory,
         [Parameter()] [Alias('nx')]                                     [Switch]   $NoExit,
-        [Parameter()] [Alias('ws')]                                     [Switch]   $EnableWebServer,
-        [Parameter()] [Alias('wp')] [ValidateRange(0, [int]::MaxValue)] [Int]      $WebServerPort       = 8080
+        [Parameter()] [Alias('ns')]                                     [Switch]   $NoStress,
+        [Parameter()] [Alias('dd')]                                     [Switch]   $ShowDebugData,
+        [Parameter()] [Alias('pl')]                                     [Switch]   $PersistLogs
     )
 
     begin
     {
-      # Update the CPU and Memory threads based on the automatic setting (0)
-        $CpuThreads, $MemThreads = Get-ThreadCounts -CPU $CpuThreads -NoCPU:$NoCPU `
-                                                    -Memory $MemThreads -NoMemory:$NoMemory
+      # Create a PSCustomObject to load all app data.
+        [PSCustomObject] $appData = @{ BoundParameters = $PSBoundParameters }
 
-      # Update the single-use intervals based on the the RandomizeIntervals parameter.
-        if ( $StressDuration -eq 0 ) {
-            $StressDuration = [int32]::MaxValue }
-        elseif ( $RandomizeIntervals.Contains('d') ) {
-            $StressDuration = Get-Random -Minimum $StressDuration -Maximum $MaxIntervalDuration
-        }
-
-        if ( $RandomizeIntervals.Contains('w') ) {
-            $WarmUpInterval = Get-Random -Minimum $WarmUpInterval -Maximum $MaxIntervalDuration
-        }
-
-        if ( $RandomizeIntervals.Contains('c') ) {
-            $CoolDownInterval = Get-Random -Minimum $CoolDownInterval -Maximum $MaxIntervalDuration
-        }
-
-      # The end time of the stress cycle
-        $StressEndTime = (Get-Date) + ( New-TimeSpan -Minutes $StressDuration )
-
-      # The total time for all intervals
-        $totalIntervalTime = $WarmUpInterval + $StressDuration + $CoolDownInterval
-
-      # The max Stress Cycle Interval for user messages
-        $maxSCinterval = if ( $StressDuration -lt $MaxIntervalDuration ) { $StressDuration }
-                         else { $MaxIntervalDuration }
-
-      # User messages
-        $msg = @{
-            paramError = "Intervals aborted. Invalid parameters: 'NoCPU' and 'NoMemory' are exclusive."
-            start      = "Starting intervals ..."
-            warm       = "Starting warm up interval ..."
-            startcycle = "Starting stress/rest interval cycle ..."
-            cool       = "Starting cool down interval ..."
-            complete   = "All intervals completed."
-            error      = "Intervals failed."
-            noexit     = "The NoExit switch was detected.`n`rThis process will now wait indefinitely ..."
-
-            warmint    = "... Warm Interval: {0} minutes"   -f $WarmUpInterval
-            coolint    = "... Cool Interval: {0} minutes"   -f $CoolDownInterval
-            strescyc   = "... Stress Cycle: {0} minutes"    -f $StressDuration
-            randomized = "... Randomized Interval(s): {0}"  -f $( $RandomizeIntervals -join ',' )
-            stresint   = "... Stress Interval: {0} minutes" -f $( $RandomizeIntervals.Contains('s') ?
-                                                                  $('{0}-{1}' -f $StressInterval,$maxSCinterval) :
-                                                                  $StressInterval )
-            restint    = "... Rest Interval: {0} minutes"   -f $( $RandomizeIntervals.Contains('r') ?
-                                                                  $('{0}-{1}' -f $RestInterval,$maxSCinterval) :
-                                                                  $RestInterval )
-
-            startingws = "... Starting web server. THIS REQUIRES ADMIN RIGHTS."
-            startedws  = "... Web server started on port {0}." -f $WebServerPort
-        }
-
-      # Clear the log files
-        $null | Out-File $WS_APP_LOG_PATH
-        $null | Out-File $WS_USR_LOG_PATH
+      # Add and calculate remaining values
+        $appData = $appData | Add-CallParameters |
+                              Test-UserIsAdmin | Test-IsContainer | Test-IsNanoServer |
+                              Add-PhysicalMemory | Add-LogicalCores |
+                              Update-MemoryThreadCount | Update-CpuThreadCount |
+                              Update-MaxStressDuration | Update-RandomizedIntervals | Add-TotalIntervalTime |
+                              Add-UserMessages
     }
 
     process
     {
         try {
 
-            if ( $NoCPU -and $NoMemory ) { Write-Info -e -m $msg.paramError; return }
+            if ( $appData.NoCPU -and $appData.NoMemory ) { Write-Info -e -m $appData.messages.paramError; return }
 
-            Write-EventMessages -m $msg.start -d $totalIntervalTime -c $CpuThreads -r $MemThreads
-            Write-Info -M $msg.warmint
-            Write-Info -M $msg.coolint
-            Write-Info -M $msg.strescyc
-            Write-Info -M $msg.stresint
-            Write-Info -M $msg.restint
-            Write-Info -M $msg.randomized
-
-            if ( $EnableWebServer ) {
-                Write-Info -M $msg.startingws
-               #Start-Process -FilePath "pwsh" -Verb RunAs -ArgumentList ('-File', $WS_START_PATH, '-port', $WebServerPort)
-                Start-Process -FilePath "pwsh" -ArgumentList ('-File', $WS_START_PATH, '-port', $WebServerPort)
-                Write-Info -M $($msg.startedws -f $WebServerPort)
+            if ( $appData.ShowDebugData ) {
+                Write-Info -h -m "Debug Data" -PSCustomObject $appData
+               #Write-Info -h -m "Messages Debug Data" -PSCustomObject $appData.messages
             }
 
-            Write-EventMessages -m $msg.warm -d $WarmUpInterval -Wait
+            Write-EventMessages -m $appData.messages.start -d $appData.TotalIntervalTime
 
-            Write-EventMessages -m $msg.startcycle -d $StressDuration
+            Write-Info -m $appData.messages.container
+            Write-Info -m $appData.messages.adminuser
 
-            $eventData = @{
-                CPUthreads      = $CpuThreads
-                MEMthreads      = $MemThreads
-                StressInterval  = $StressInterval
-                RestInterval    = $RestInterval
-                MaxInterval     = $MaxIntervalDuration
-                RandomizeStress = $RandomizeIntervals.Contains('s')
-                RandomizeRest   = $RandomizeIntervals.Contains('r')
-                EndTime         = $StressEndTime
+            if ( -not $NoStress ) {
+                Write-Info -m $appData.messages.cputhreads
+                Write-Info -m $appData.messages.memthreads
+                Write-Info -m $appData.messages.warmint
+                Write-Info -m $appData.messages.coolint
+                Write-Info -m $appData.messages.strescyc
+                Write-Info -m $appData.messages.stresint
+                Write-Info -m $appData.messages.restint
+                Write-Info -m $appData.messages.randomized
             }
-            Invoke-Tests @eventData
 
-            Write-EventMessages -m $msg.cool -d $CoolDownInterval -Wait
+            if ( $appData.EnableWebServer ) { Invoke-WebServer -AppData $appData }
 
-            Write-Info -P -PS -M $msg.complete
+            if ( $NoStress ) {
+                Write-Info -p -ps -m $appData.messages.nostress
+            }
+            else {
+                Write-EventMessages -m $appData.messages.warm -d $appData.WarmUpInterval -Wait
+                Write-EventMessages -m $appData.messages.startcycle -d $appData.StressDuration
+                Invoke-Tests -AppData $appData
+                Write-EventMessages -m $appData.messages.cool -d $appData.CoolDownInterval -Wait
+                Write-Info -p -ps -m $appData.messages.completed
+            }
 
-            if ( $NoExit ) {
-                Write-Info -P -PS -M $msg.noexit
+            if ( $appData.NoExit ) {
+                Write-Info -p -ps -m $appData.messages.noexit
                 Wait-Event -1
+            }
+            else {
+                Write-Info -p -ps -m $appData.messages.exit
             }
         }
         catch {
-            Write-Info -E -M $msg.error
+            Write-Info -e -m $appData.messages.error
             $_
         }
     }

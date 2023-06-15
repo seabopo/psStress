@@ -67,7 +67,8 @@ if ( $env:STRESS_EnableWebServerOnly ) {
 }
 else {
 
-    $switchParams = @('STRESS_NoCPU','STRESS_NoMemory','STRESS_NoExit','STRESS_EnableWebServer')
+    $switchParams = @('STRESS_NoCPU','STRESS_NoMemory','STRESS_NoStress','STRESS_NoExit',
+                      'STRESS_ShowDebugData','STRESS_EnableWebServer')
     $arrayParams  = @('STRESS_RandomizeIntervals')
 
     $params = @{}

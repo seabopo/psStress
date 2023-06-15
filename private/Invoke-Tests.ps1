@@ -3,54 +3,34 @@ function Invoke-Tests
     <#
     .DESCRIPTION
         Runs CPU and memory stress tests.
-
     #>
     [CmdletBinding()]
-    param (
-        [Parameter(Mandatory)] [Int]      $CPUthreads,
-        [Parameter(Mandatory)] [Int]      $MEMthreads,
-        [Parameter(Mandatory)] [Int]      $StressInterval,
-        [Parameter(Mandatory)] [Int]      $RestInterval,
-        [Parameter(Mandatory)] [Int]      $MaxInterval,
-        [Parameter(Mandatory)] [Bool]     $RandomizeStress,
-        [Parameter(Mandatory)] [Bool]     $RandomizeRest,
-        [Parameter(Mandatory)] [DateTime] $EndTime
-    )
-
-    begin
-    {
-      # User messages
-        $msg = @{
-            stress    = "Starting stress interval ..."
-            rest      = "Starting rest interval ..."
-            jobs      = "... Jobs started: {0}"
-            countdown = "... Interval will complete in {0} minute(s) ..."
-            cleanup   = "... Cleaning up jobs ..."
-            complete  = "... Interval complete."
-        }
-    }
+    param ( [Parameter(Mandatory,ValueFromPipeline)] [PSCustomObject] $AppData )
 
     process
     {
         do {
 
-            if ( $stress ) { $stress = $false; $rest = $true;  $duration = $RestInterval   }
-            else           { $stress = $true;  $rest = $false; $duration = $StressInterval }
+            if ( $stress ) { $stress = $false; $rest = $true;  $duration = $appData.RestInterval   }
+            else           { $stress = $true;  $rest = $false; $duration = $appData.StressInterval }
 
-            if ( ($stress -and $RandomizeStress) -or ($rest -and $RandomizeRest) ) {
-                $duration = Get-Random -Minimum $duration -Maximum $MaxInterval
+            if ( ($stress -and $appData.RandomizeStress) -or ($rest -and $appData.RandomizeRest) ) {
+                $duration = Get-Random -Minimum $duration -Maximum $appData.MaxStressCycleInterval
             }
 
-            if ( ( (Get-Date) + (New-TimeSpan -Minutes $duration) ) -gt $EndTime ) {
-                $duration = (NEW-TIMESPAN -Start ( Get-Date ) -End $EndTime).Minutes
+            if ( ( (Get-Date) + (New-TimeSpan -Minutes $duration) ) -gt $appData.StressEndTime ) {
+                $duration = (NEW-TIMESPAN -Start ( Get-Date ) -End $appData.StressEndTime).Minutes
             }
 
             if ( $stress -and $duration -gt 0 ) {
 
-                Write-EventMessages -m $msg.stress -d $duration -c $CPUthreads -r $MEMthreads
+                Write-EventMessages -m $appData.messages.stress `
+                                    -d $duration `
+                                    -c $appData.CPUthreads `
+                                    -r $appData.MEMthreads
 
-                if ( $CPUthreads -gt 0 ) {
-                    foreach ( $thread in 1..$CPUthreads ){
+                if ( $appData.CPUthreads -gt 0 ) {
+                    foreach ( $thread in 1..$appData.CPUthreads ){
                         Start-Job -ScriptBlock {
                             foreach ( $number in 1..2147483647)  {
                                 1..2147483647 | ForEach-Object { $x = 1 }{ $x = $x * $_ }
@@ -59,22 +39,22 @@ function Invoke-Tests
                     }
                 }
 
-                if ( $MEMthreads -gt 0 ) {
-                    foreach ( $thread in 1..$MEMthreads ){
+                if ( $appData.MEMthreads -gt 0 ) {
+                    foreach ( $thread in 1..$appData.MEMthreads ){
                         Start-Job -ScriptBlock {
                             1..50 | ForEach-Object { $x = 1 }{ [array]$x += $x }
                         } | Out-Null
                     }
                 }
 
-                Write-Info -I -M $( $msg.jobs -f @(get-job).count )
+                Write-Info -m $( $appData.messages.jobs -f @(get-job).count )
 
                 $duration..1 | ForEach-Object {
-                    Write-Info -I -M $( $msg.countdown -f $_ )
+                    Write-Info -m $( $appData.messages.countdown -f $_ )
                     Start-Sleep -Seconds 60
                 }
 
-                Write-Info -I -M $msg.cleanup
+                Write-Info -m $appData.messages.cleanup
                 get-job | stop-job
                 get-job | Remove-Job
                #[System.GC]::GetTotalMemory(‘forcefullcollection’) | out-null
@@ -82,15 +62,15 @@ function Invoke-Tests
                 [GC]::Collect()
                 [GC]::WaitForPendingFinalizers()
 
-                Write-Info -I -M $msg.complete
+                Write-Info -m $appData.messages.complete
 
             }
             elseif ( $rest -and $duration -gt 0 ) {
 
-                Write-EventMessages -m $msg.rest -d $duration -wait
+                Write-EventMessages -m $appData.messages.rest -d $duration -wait
 
             }
 
-        } until ( (Get-Date) -ge $EndTime )
+        } until ( (Get-Date) -ge $appData.StressEndTime )
     }
 }

@@ -15,9 +15,13 @@
     <body>
         <div class=title>psStress</div>
         <div class=menu>
-            <A href=/applog>App Log</a> |
-            <A href=/userlog>User Log</a> |
-            <A href=/stop>Stop Server</a>
+            <A href=/applog  title="View the application log.">App Log</a> |
+            <A href=/userlog title="View the user requests log.">User Log</a> |
+            Stress for:
+            <A href="/stress10"   title="Stress for 10 minutes and stop.">10m</a> /
+            <A href="/stress10x4" title="For the next 4 hours repeat a 10 minute stress followed by a 20 minute rest.">10x4h</a> /
+            <A href="/stressrnd"  title="For the next 4 hours repeat random stress and rest intervals.">Random</a>
+            <!--A href="/stop" title="Stop the Web Server. Stress intervals will continue to run.">Stop Web Server</a-->
         </div>
         <div class=rule></div>
         <pre>
