@@ -14,7 +14,9 @@ function Invoke-WebServer
         if ( $appData.UserIsAdmin ) {
             try {
                 Start-Process -FilePath "pwsh" `
-                              -ArgumentList ('-File', $WS_START_PATH, '-port', $appData.WebServerPort)
+                              -ArgumentList ('-File', $WS_START_PATH, `
+                                             '-Port', $appData.WebServerPort, `
+                                             "-EnableConsoleLogs:$($appData.EnableWebServerConsoleLogs)")
                 Write-Info -m $($appData.messages.startedws -f $appData.WebServerPort)
             }
             catch {
@@ -30,7 +32,9 @@ function Invoke-WebServer
             Write-Info -w -m $appData.messages.wselevate
             try {
                 Start-Process -FilePath "pwsh" -Verb RunAs `
-                              -ArgumentList ('-File', $WS_START_PATH, '-port', $appData.WebServerPort)
+                              -ArgumentList ('-File', $WS_START_PATH, `
+                                             '-Port', $appData.WebServerPort, `
+                                             "-EnableConsoleLogs:$($appData.EnableWebServerConsoleLogs)")
                 Write-Info -m $($appData.messages.startedws -f $appData.WebServerPort)
             }
             catch {

@@ -31,7 +31,7 @@ $Test = @{
 #   get-job | stop-job
 #   get-job | Remove-Job
 
-if ( $Test.WebServer )        { Start-Stressing -ws -ns -dd -nx }
+if ( $Test.WebServer )        { Start-Stressing -ws -ns -nx -wc }
 
 if ( $Test.DumpDebugData )    { Start-Stressing -ns -dd }
 
@@ -54,6 +54,17 @@ if ( $Test.DockerContainer )
                 -it --user ContainerAdministrator `
                 mcr.microsoft.com/powershell:nanoserver-1809 `
                 pwsh -ExecutionPolicy Bypass
+
+  # Test only the web server.
+    docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
+                -e "STRESS_EnableWebServer=1" `
+                -e "STRESS_NoExit=1" `
+                -e "STRESS_NoStress=1" `
+                -e "STRESS_EnableWebServerConsoleLogs=1" `
+                -it --user ContainerAdministrator `
+                -p 8080:8080 `
+                mcr.microsoft.com/powershell:nanoserver-1809 `
+                pwsh -ExecutionPolicy Bypass -command "/psstress/docker.ps1"
 
   # Test with only the web server and debug dump.
     docker run  --mount type=bind,source=C:\Repos\Github\psStress,target=C:\psStress `
@@ -134,6 +145,33 @@ if ( $Test.DockerContainer )
                 -it `
                 mcr.microsoft.com/powershell:nanoserver-1809 `
                 pwsh -ExecutionPolicy Bypass -command "/psstress/docker.ps1"
+
+  # Test dockerhub images.
+    docker run `
+                -e "STRESS_EnableWebServer=1" `
+                -e "STRESS_NoWebServerConsoleLogs=1" `
+                -e "STRESS_NoExit=1" `
+                -e "STRESS_NoStress=1" `
+                -e "STRESS_ShowDebugData=1" `
+                -p 8080:8080 `
+                seabopo/psstress:nanoserver-1809
+
+    docker run `
+                -e "STRESS_StressDuration=10" `
+                -e "STRESS_WarmUpInterval=1" `
+                -e "STRESS_CoolDownInterval=1" `
+                -e "STRESS_StressInterval=1" `
+                -e "STRESS_RestInterval=1" `
+                -e "STRESS_RandomizeIntervals=s,r" `
+                -e "STRESS_MaxIntervalDuration=5" `
+                -e "STRESS_CpuThreads=1" `
+                -e "STRESS_MemThreads=1" `
+                -e "STRESS_NoExit=1" `
+                -e "STRESS_EnableWebServer=1" `
+                -e "STRESS_WebServerPort=80" `
+                -e "STRESS_NoWebServerConsoleLogs=1" `
+                -p 8080:8080 `
+                seabopo/psstress:nanoserver-1809
 
 }
 

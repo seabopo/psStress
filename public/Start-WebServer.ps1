@@ -6,7 +6,8 @@ function Start-WebServer
     #>
     [CmdletBinding()]
     param (
-        [Parameter()] [Alias('p')] [Int] $Port = 8080
+        [Parameter()] [Alias('p')] [Int]    $Port = 8080,
+        [Parameter()] [Alias('c')] [Switch] $EnableConsoleLogs
     )
 
     begin
@@ -45,7 +46,7 @@ function Start-WebServer
 
                 $log | Out-File $WS_USR_LOG_PATH -Append
 
-                Write-Info -m $log -nl
+                if ( $EnableConsoleLogs ) { Write-Info -m $log -nl }
 
                 $stressAndRedirect = $false
 

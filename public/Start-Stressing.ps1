@@ -116,6 +116,7 @@ function Start-Stressing
         [Parameter()] [Alias('md')] [ValidateRange(0, [int]::MaxValue)] [Int]      $MaxIntervalDuration = 1440,
         [Parameter()] [Alias('wp')] [ValidateRange(0, [int]::MaxValue)] [Int]      $WebServerPort       = 8080,
         [Parameter()] [Alias('ws')]                                     [Switch]   $EnableWebServer,
+        [Parameter()] [Alias('wc')]                                     [Switch]   $EnableWebServerConsoleLogs,
         [Parameter()] [Alias('nc')]                                     [Switch]   $NoCPU,
         [Parameter()] [Alias('nm')]                                     [Switch]   $NoMemory,
         [Parameter()] [Alias('nx')]                                     [Switch]   $NoExit,
