@@ -73,8 +73,13 @@ else {
 
     $params = @{}
 
+        if ( $env:STRESS_ShowDebugData ) {
+        write-host "The following environment variables were found:" -ForegroundColor Magenta
+    }
+
     Get-Item -Path Env:\STRESS_* |
         ForEach-Object {
+            if ( $env:STRESS_ShowDebugData ) { "... $($_.Name) = $($_.Name)" }
             $key   = $_.Name.Replace('STRESS_','')
             $value = if     ( $_.Name -in $switchParams ) { $true }
                     elseif ( $_.Name -in $arrayParams )  { $_.value -split ',' }
