@@ -73,8 +73,10 @@ else {
 
     $params = @{}
 
-        if ( $env:STRESS_ShowDebugData ) {
-        write-host "The following environment variables were found:" -ForegroundColor Magenta
+    if ( $env:STRESS_ShowDebugData ) {
+        write-host "`nThe following environment variables were found:" -ForegroundColor Magenta
+        Get-Item -Path Env:* | Out-String
+        write-host "`nThe following environment variables will be used:" -ForegroundColor Magenta
     }
 
     Get-Item -Path Env:\STRESS_* |
