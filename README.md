@@ -6,7 +6,7 @@ The full parameter list can be viewed in the
 [/public/Start-Stressing.ps1](https://github.com/seabopo/psStress/blob/main/public/Start-Stressing.ps1) 
 file, which is the module's main entrypoint.
 
-A variety of Windows and Docker examples are available in the 
+A variety of Windows and Docker usage examples are available in the 
 [/psStress-tests.ps1](https://github.com/seabopo/psStress/blob/main/psStress-tests.ps1) file.
 
 A Windows Nano Server image of this module is available here: 
