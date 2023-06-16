@@ -54,31 +54,31 @@ function Start-WebServer
                     "GET /applog"  { $contentPath = $WS_APP_LOG_PATH; break }
                     "GET /stop"    { $wsListener.Stop(); break wsListener }
                     "GET /stress10" {
-                        Remove-Item -Path Env:\STRESS_*
-                        $env:STRESS_WarmUpInterval = 0
-                        $env:STRESS_StressDuration = 10
-                        $env:STRESS_StressInterval = 10
-                        $env:STRESS_RestInterval   = 0
+                        Remove-Item -Path Env:\PS_STRESS_*
+                        $env:PS_STRESS_WarmUpInterval = 0
+                        $env:PS_STRESS_StressDuration = 10
+                        $env:PS_STRESS_StressInterval = 10
+                        $env:PS_STRESS_RestInterval   = 0
                         $stressAndRedirect         = $true
                         break
                     }
                     "GET /stress10x4" {
-                        Remove-Item -Path Env:\STRESS_*
-                        $env:STRESS_WarmUpInterval = 0
-                        $env:STRESS_StressDuration = 240
-                        $env:STRESS_StressInterval = 10
-                        $env:STRESS_RestInterval   = 20
+                        Remove-Item -Path Env:\PS_STRESS_*
+                        $env:PS_STRESS_WarmUpInterval = 0
+                        $env:PS_STRESS_StressDuration = 240
+                        $env:PS_STRESS_StressInterval = 10
+                        $env:PS_STRESS_RestInterval   = 20
                         $stressAndRedirect         = $true
                         break
                     }
                     "GET /stressrnd" {
-                        Remove-Item -Path Env:\STRESS_*
-                        $env:STRESS_WarmUpInterval      = 0
-                        $env:STRESS_StressDuration      = 240
-                        $env:STRESS_StressInterval      = 1
-                        $env:STRESS_RestInterval        = 1
-                        $env:STRESS_MaxIntervalDuration = 60
-                        $env:STRESS_RandomizeIntervals  = "s,r"
+                        Remove-Item -Path Env:\PS_STRESS_*
+                        $env:PS_STRESS_WarmUpInterval      = 0
+                        $env:PS_STRESS_StressDuration      = 240
+                        $env:PS_STRESS_StressInterval      = 1
+                        $env:PS_STRESS_RestInterval        = 1
+                        $env:PS_STRESS_MaxIntervalDuration = 60
+                        $env:PS_STRESS_RandomizeIntervals  = "s,r"
                         $stressAndRedirect              = $true
                         break
                     }
